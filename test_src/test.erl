@@ -31,13 +31,13 @@ start()->
     io:format("~p~n",[{"Stop setup",?MODULE,?FUNCTION_NAME,?LINE}]),
 
   %  io:format("~p~n",[{"Start distributed_test()",?MODULE,?FUNCTION_NAME,?LINE}]),
-    ok=single_test:start(),
-    io:format("~p~n",[{"Stop distributed_test()",?MODULE,?FUNCTION_NAME,?LINE}]),
+%    ok=single_test:start(),
+ %   io:format("~p~n",[{"Stop distributed_test()",?MODULE,?FUNCTION_NAME,?LINE}]),
 
 
  %  io:format("~p~n",[{"Start distributed_test()",?MODULE,?FUNCTION_NAME,?LINE}]),
-%    ok=distributed_test:start(),
-%    io:format("~p~n",[{"Stop distributed_test()",?MODULE,?FUNCTION_NAME,?LINE}]),
+    ok=distributed_test:start(),
+    io:format("~p~n",[{"Stop distributed_test()",?MODULE,?FUNCTION_NAME,?LINE}]),
 
   %  io:format("~p~n",[{"Start monkey()",?MODULE,?FUNCTION_NAME,?LINE}]),
   %  ok=monkey(),

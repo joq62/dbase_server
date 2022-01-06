@@ -57,11 +57,6 @@ schedule()->
 %% --------------------------------------------------------------------
 init([]) ->
     
-    mnesia:stop(),
-    mnesia:del_table_copy(schema,node()),
-    mnesia:delete_schema([node()]),
-    mnesia:start(),
-    
     rpc:cast(node(),log,log,[?logger_info(info,"server started",[])]),
     {ok, #state{}}.
 
@@ -75,6 +70,11 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
+
+handle_call({dynamic_db_init,DbaseNodeList},_From, State) ->
+    Reply=rpc:call(node(),lib_dbase,dynamic_db_init,[DbaseNodeList],5*1000),
+    {reply, Reply, State};
+
 
 handle_call({create,Record},_From, State) ->
     Reply=rpc:call(node(),lib_dbase,create,[Record],5*1000),

@@ -138,7 +138,11 @@ setup()->
 %% -------------------------------------------------------------------    
 
 cleanup()->
-  
+    mnesia:stop(),
+    mnesia:del_table_copy(schema,node()),
+    mnesia:delete_schema([node()]),
+    timer:sleep(1000),
+    [slave:stop(Node)||Node<-get_nodes()],
     ok.
 %% --------------------------------------------------------------------
 %% Function:start/0 

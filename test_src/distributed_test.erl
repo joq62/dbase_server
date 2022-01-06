@@ -56,31 +56,46 @@ start()->
 %% Returns: non
 %% -------------------------------------------------------------------
 initial()->
-    [ok,ok,ok]=[rpc:call(N,application,start,[sd],5*1000)||N<-get_nodes()],
     [N1,N2,N3]=get_nodes(),
     %% intial node
-    ok=rpc:call(N1,application,start,[dbase_infra],5*1000),
-    [io:format("N1 ~p~n",[{Node,rpc:call(Node,mnesia,system_info,[tables],2*1000)}])||Node<-get_nodes()],
+    {ok,_DbasePid1}=rpc:call(N1,dbase,start,[],5*1000),
+    RunningDbaseNodes1=[],
+    ok=rpc:call(N1,dbase,dynamic_db_init,[RunningDbaseNodes1],5*1000),    
+    ok=db_host:create_table(N1),
+    {atomic,ok}=db_host:create(N1,{id1,access1,type1,startargs1,dirs1,appdir1,capa1,status1}),
+    [io:format("#10 ~p~n",[{N,rpc:call(N,mnesia,system_info,[tables],2*1000)}])||N<-get_nodes()],
+    [io:format("#11 ~p~n",[{N,rpc:call(node(),db_host,read_all,[N],5*1000)}])||N<-get_nodes()],
 
-    ok=rpc:call(N2,application,start,[dbase_infra],5*1000),
-    [io:format("N2 ~p~n",[{Node,rpc:call(Node,mnesia,system_info,[tables],2*1000)}])||Node<-get_nodes()],
+    %% Second node
+    {ok,_DbasePid2}=rpc:call(N2,dbase,start,[],5*1000),    
+    RunningDbaseNodes2=[N1],
+    ok=rpc:call(N2,lib_dbase,dynamic_db_init,[RunningDbaseNodes2],5*1000),    
+    [io:format("#20 ~p~n",[{N,rpc:call(N,mnesia,system_info,[tables],2*1000)}])||N<-get_nodes()],
+    {atomic,ok}=db_host:create(N2,{id2,access2,type2,startargs2,dirs2,appdir2,capa2,status2}),
+    [io:format("#21 ~p~n",[{N,rpc:call(node(),db_host,read_all,[N],5*1000)}])||N<-get_nodes()],
 
-    ok=rpc:call(N3,application,start,[dbase_infra],5*1000),
-    [io:format("N3 ~p~n",[{Node,rpc:call(Node,mnesia,system_info,[tables],2*1000)}])||Node<-get_nodes()],
+    %% Third node
 
-    [io:format("service_catalog ~p~n",[{Node,rpc:call(Node,db_service_catalog,read_all,[],2*1000)}])||Node<-get_nodes()],
+    {ok,_DbasePid3}=rpc:call(N3,dbase,start,[],5*1000),    
+    RunningDbaseNodes3=[N1,N2],
+    ok=rpc:call(N3,lib_dbase,dynamic_db_init,[RunningDbaseNodes3],5*1000),
+    [io:format("#30 ~p~n",[{N,rpc:call(N,mnesia,system_info,[tables],2*1000)}])||N<-get_nodes()],
+    {atomic,ok}=db_host:create(N2,{id3,access3,type3,startargs3,dirs3,appdir3,capa3,status3}),
+    [io:format("#31 ~p~n",[{N,rpc:call(node(),db_host,read_all,[N],5*1000)}])||N<-get_nodes()],
+
+    %% Update
+    {atomic,ok}=db_host:update(N2,id3,status,working),
+    [io:format("#40 ~p~n",[{N,rpc:call(node(),db_host,read_all,[N],5*1000)}])||N<-get_nodes()],
     
-  %  [ok,ok,ok]=[rpc:call(Node,application,start,[dbase_infra],5*1000)||Node<-get_nodes()],
- %   [io:format("~p~n",[{Node,rpc:call(Node,mnesia,system_info,[],2*1000)}])||Node<-get_nodes()],
-    %%----- load initial node
-%    [Node0|_]=get_nodes(),
- %   [{atomic,ok},{atomic,ok},{atomic,ok}]=rpc:call(Node0,dbase_infra,load_from_file,[db_host,?ConfigDir],5*1000),
-    
- %   [{host0@c100,host1@c100},
-  %   {host1@c100,{badrpc,_}},
-  %   {host2@c100,{badrpc,_}}]=[{Node,rpc:call(Node,db_host,node,[{"c100","host1"}],5*1000)}||Node<-get_nodes()],
-    
-    ok.
+    %% Delete 
+    {atomic,ok}=db_host:delete(N1,id2),
+    [io:format("#50 ~p~n",[{N,rpc:call(node(),db_host,read_all,[N],5*1000)}])||N<-get_nodes()],
+   
+
+    init:stop(),
+    timer:sleep(1500),
+
+   ok.
 
 %% --------------------------------------------------------------------
 %% Function:start/0 
@@ -120,14 +135,12 @@ setup()->
      {ok,Node1},
      {ok,Node2}]=[start_slave(NodeName)||NodeName<-["host0","host1","host2"]],
     [net_adm:ping(N)||N<-Nodes],
-    application:stop(dbase_infra),
-    application:unload(dbase_infra),
     mnesia:stop(),
     mnesia:del_table_copy(schema,node()),
     mnesia:delete_schema([node()]),
     timer:sleep(1000),
-      
-  
+    {ok,_}=sd:start(),
+     
     ok.
 
 %% --------------------------------------------------------------------
@@ -137,7 +150,11 @@ setup()->
 %% -------------------------------------------------------------------    
 
 cleanup()->
-  
+    mnesia:stop(),
+    mnesia:del_table_copy(schema,node()),
+    mnesia:delete_schema([node()]),
+    timer:sleep(1000),
+    [slave:stop(Node)||Node<-get_nodes()],
     ok.
 %% --------------------------------------------------------------------
 %% Function:start/0 
