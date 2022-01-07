@@ -13,7 +13,8 @@
 	 create/2,
 	 delete/2,	 
 	 create_table/1,
-	 update/4
+	 update/4,
+	 add_table/1
 
 	]).
 
@@ -58,7 +59,7 @@ read(Node,Object)->
 	       {aborted,Reason}->
 		   {aborted,Reason};
 	       All->
-		   [{}||{T1,T2}<-All,
+		   [{T1,T2}||{T1,T2}<-All,
 			T1=:=Object]
 	   end,
     Result.
@@ -97,6 +98,12 @@ delete(Node,Object) ->
 	   end,
     Result.
 %%-------------------------------------------------------------------------
+add_table(AddedNode)->
+    StorageType=ram_copies,
+    rpc:call(AddedNode,lib_dbase,dynamic_load_table,[?TABLE,StorageType],25*1000).
+    
+
+
 read_all_record(Node)->
     Result=case rpc:call(Node,dbase,do_qlc,[?TABLE],5*1000) of
 	       {aborted,Reason}->

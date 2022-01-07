@@ -71,6 +71,12 @@ init([]) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
 
+handle_call({add_table,Node,Table,StorageType},_From, State) ->
+    Reply=rpc:call(node(),lib_dbase,add_table,[Node,Table,StorageType],25*1000),
+    {reply, Reply, State};
+
+
+
 handle_call({dynamic_db_init,DbaseNodeList},_From, State) ->
     Reply=rpc:call(node(),lib_dbase,dynamic_db_init,[DbaseNodeList],5*1000),
     {reply, Reply, State};

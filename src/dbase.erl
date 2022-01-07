@@ -17,7 +17,8 @@
 	 delete/2,
 	 do_qlc/1,
 
-	 dynamic_db_init/1
+	 dynamic_db_init/1,
+	 add_table/3
 	]).
 -export([
 	 
@@ -80,6 +81,9 @@ load_from_file(Module,Dir,Directive)->
 
 dynamic_db_init(DbaseNodeList)->
     gen_server:call(?SERVER, {dynamic_db_init,DbaseNodeList},infinity).
+add_table(Node,Table,StorageType)->
+    gen_server:call(?SERVER, {add_table,Node,Table,StorageType},infinity).
+
 init_dynamic()->
     gen_server:call(?SERVER, {init_dynamic},infinity).
 add_dynamic(Node)->

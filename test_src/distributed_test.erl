@@ -74,10 +74,13 @@ stop_restart()->
     {ok,_DbasePid2}=rpc:call(N2,dbase,start,[],5*1000),    
     RunningDbaseNodes2=[N1,N3],
     ok=rpc:call(N2,lib_dbase,dynamic_db_init,[RunningDbaseNodes2],5*1000),
+    db_test1:add_table(N2),
     [io:format("#220 ~p~n",[{N,rpc:call(node(),db_host,read_all,[N],5*1000)}])||N<-get_nodes()],
     [io:format("#221 ~p~n",[{N,rpc:call(node(),db_test1,read_all_record,[N],5*1000)}])||N<-get_nodes()],
+  %  [io:format("#222 ~p~n",[{N,rpc:call(N,mnesia,system_info,[],2*1000)}])||N<-get_nodes()],
 
-    
+    init:stop(),
+    timer:sleep(2000),    
     ok.
 %% --------------------------------------------------------------------
 %% Function:start/0 
@@ -91,15 +94,19 @@ add_db_test1()->
     %% 
     ok=db_test1:create_table(N2),
     [io:format("#110 ~p~n",[{N,rpc:call(N,mnesia,system_info,[],2*1000)}])||N<-get_nodes()],
+    db_test1:add_table(N1),
+    db_test1:add_table(N3),
     {atomic,ok}=db_test1:create(N1,{term11,term12}),
-    
+
+   
    % make so it becomes a copy note only remote
 
     [io:format("#111 ~p~n",[{N,rpc:call(node(),db_host,read_all,[N],5*1000)}])||N<-get_nodes()],
     [io:format("#112 ~p~n",[{N,rpc:call(node(),db_test1,read_all_record,[N],5*1000)}])||N<-get_nodes()],
 
-    init:stop(),
-    timer:sleep(2000),
+    [io:format("#113 ~p~n",[{N,rpc:call(N,mnesia,system_info,[],2*1000)}])||N<-get_nodes()],
+
+
     ok.
 %% --------------------------------------------------------------------
 %% Function:start/0 

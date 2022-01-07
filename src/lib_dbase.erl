@@ -23,11 +23,29 @@
 	 delete/2,
 	 do_qlc/1,
 	 dynamic_db_init/1,
-	 dynamic_load_table/1
+	 dynamic_load_table/2,
+	 add_table/3
 	 ]).
 %% ====================================================================
 %% External functions
 %% ====================================================================
+
+add_table(Node,Table,StorageType)->
+    mnesia:add_table_copy(Table, Node, StorageType),
+    Tables=mnesia:system_info(tables),
+    mnesia:wait_for_tables(Tables,20*1000).
+
+
+%add_table(StorageType)->
+%    mnesia:add_table_copy(?TABLE, node(), StorageType),
+%    Tables=mnesia:system_info(tables),
+%    mnesia:wait_for_tables(Tables,20*1000).
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+
 create(Record)->
     F = fun() ->
 		mnesia:write(Record)
@@ -48,7 +66,11 @@ delete(Table,RecordToRemove)->
 		 
 	end,
     mnesia:transaction(F).
-
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
 update(Table,RecordToUpdate,EntryNum,NewData)->
     F = fun() -> 
 		All=do_qlc(Table),
@@ -118,11 +140,10 @@ dynamic_db_init([DbaseNode|T])->
 	    dynamic_db_init(T) 
     end.
 
-dynamic_load_table(Module)->
+dynamic_load_table(Table,StorageType)->
   %  io:format("Module ~p~n",[{Module,node(),?FUNCTION_NAME,?MODULE,?LINE}]),
-    Added=node(),
-    StorageType=ram_copies,
-    Module:add_table(Added,StorageType),
+    AddedNode=node(),
+    mnesia:add_table_copy(Table, AddedNode, StorageType),
     Tables=mnesia:system_info(tables),
     mnesia:wait_for_tables(Tables,20*1000).
 
