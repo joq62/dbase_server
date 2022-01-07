@@ -39,7 +39,14 @@ start()->
     io:format("~p~n",[{"Start initial()()",?MODULE,?FUNCTION_NAME,?LINE}]),
     ok=initial(),
     io:format("~p~n",[{"Stop initial()()",?MODULE,?FUNCTION_NAME,?LINE}]),
+    
+    io:format("~p~n",[{"Start add_db_test1()",?MODULE,?FUNCTION_NAME,?LINE}]),
+    ok= add_db_test1(),
+    io:format("~p~n",[{"Stop  add_db_test1()",?MODULE,?FUNCTION_NAME,?LINE}]),
 
+    io:format("~p~n",[{"Start stop_restart()",?MODULE,?FUNCTION_NAME,?LINE}]),
+    ok= stop_restart(),
+    io:format("~p~n",[{"Stop  stop_restart()",?MODULE,?FUNCTION_NAME,?LINE}]),
 
  %   
       %% End application tests
@@ -49,7 +56,51 @@ start()->
    
     io:format("------>"++atom_to_list(?MODULE)++" ENDED SUCCESSFUL ---------"),
     ok.
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
 
+stop_restart()->
+    [N1,N2,N3]=get_nodes(),
+    slave:stop(N2),
+    io:format("Slave stopped ~n"),
+    [io:format("#211 ~p~n",[{N,rpc:call(node(),db_host,read_all,[N],5*1000)}])||N<-get_nodes()],
+    [io:format("#212 ~p~n",[{N,rpc:call(node(),db_test1,read_all_record,[N],5*1000)}])||N<-get_nodes()],
+
+    {ok,N2}=start_slave("host1"),
+    io:format("Slave restarted ~n"),
+    {ok,_DbasePid2}=rpc:call(N2,dbase,start,[],5*1000),    
+    RunningDbaseNodes2=[N1,N3],
+    ok=rpc:call(N2,lib_dbase,dynamic_db_init,[RunningDbaseNodes2],5*1000),
+    [io:format("#220 ~p~n",[{N,rpc:call(node(),db_host,read_all,[N],5*1000)}])||N<-get_nodes()],
+    [io:format("#221 ~p~n",[{N,rpc:call(node(),db_test1,read_all_record,[N],5*1000)}])||N<-get_nodes()],
+
+    
+    ok.
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
+add_db_test1()->
+    [N1,N2,N3]=get_nodes(),
+    [io:format("#100 ~p~n",[{N,rpc:call(node(),db_host,read_all,[N],5*1000)}])||N<-get_nodes()],
+
+    %% 
+    ok=db_test1:create_table(N2),
+    [io:format("#110 ~p~n",[{N,rpc:call(N,mnesia,system_info,[],2*1000)}])||N<-get_nodes()],
+    {atomic,ok}=db_test1:create(N1,{term11,term12}),
+    
+   % make so it becomes a copy note only remote
+
+    [io:format("#111 ~p~n",[{N,rpc:call(node(),db_host,read_all,[N],5*1000)}])||N<-get_nodes()],
+    [io:format("#112 ~p~n",[{N,rpc:call(node(),db_test1,read_all_record,[N],5*1000)}])||N<-get_nodes()],
+
+    init:stop(),
+    timer:sleep(2000),
+    ok.
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
@@ -91,10 +142,6 @@ initial()->
     {atomic,ok}=db_host:delete(N1,id2),
     [io:format("#50 ~p~n",[{N,rpc:call(node(),db_host,read_all,[N],5*1000)}])||N<-get_nodes()],
    
-
-    init:stop(),
-    timer:sleep(1500),
-
    ok.
 
 %% --------------------------------------------------------------------
