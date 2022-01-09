@@ -102,6 +102,8 @@ app_simulation_1()->
     
   %  io:format("#11 mnesia:system_info() ~p~n",[{rpc:call(node(),mnesia,system_info,[],5000),?FUNCTION_NAME,?MODULE,?LINE}]),
 
+    not_attached=db_host:status({"c200","host"}),
+   
     %% Second nodes App add is tables 
     [{test@c100,fruit,{aborted,{already_exists,fruit,test@c100}}},
      {test@c100,host,{aborted,{already_exists,host,test@c100}}},
@@ -109,7 +111,14 @@ app_simulation_1()->
    
 %    io:format("#12 mnesia:system_info() ~p~n",[{[{N,rpc:call(N,mnesia,system_info,[],5000)}|| N<-sd:get(mnesia)],?FUNCTION_NAME,?MODULE,?LINE}]),
     
+    [not_attached,
+     not_attached]=[rpc:call(N,db_host,status,[{"c200","host"}],5000)|| N<-sd:get(mnesia)],
    
+    {atomic,ok}=db_host:update_status({"c200","host"},"#1_connected"),
+
+   ["#1_connected",
+    "#1_connected"]=[rpc:call(N,db_host,status,[{"c200","host"}],5000)|| N<-sd:get(mnesia)],
+
 %% Add third node
     {ok,_}=rpc:call(N1,sd,start,[],5000),
     ok=rpc:call(N1,application,set_env,[[{dbase_infra,[{dbase_app,dbase_infra}]}]],5000),
@@ -128,8 +137,14 @@ app_simulation_1()->
     
   %  io:format("#13 mnesia:system_info() ~p~n",[{[{N,rpc:call(N,mnesia,system_info,[],5000)}|| N<-sd:get(mnesia)],?FUNCTION_NAME,?MODULE,?LINE}]),
   
-   
+
+    ["#1_connected","#1_connected","#1_connected"]=[rpc:call(N,db_host,status,[{"c200","host"}],5000)|| N<-sd:get(mnesia)],
     
+   {atomic,ok}=rpc:call(N0,db_host,update_status,[{"c200","host"},"#2_connected"],5000), 
+    
+    
+    ["#2_connected","#2_connected","#2_connected"]=[rpc:call(N,db_host,status,[{"c200","host"}],5000)|| N<-sd:get(mnesia)],
+
   %% Add fourth node'
     {ok,_}=rpc:call(N2,sd,start,[],5000),
     ok=rpc:call(N2,application,set_env,[[{dbase_infra,[{dbase_app,dbase_infra}]}]],5000),
@@ -151,7 +166,11 @@ app_simulation_1()->
      {aborted,{already_exists,vegetable,test@c100}}}]=lists:sort(rpc:call(N2,dbase,load_textfile,[TableTextFiles],5000)),
     
   %  io:format("#14 mnesia:system_info() ~p~n",[{[{N,rpc:call(N,mnesia,system_info,[],5000)}|| N<-sd:get(mnesia)],?FUNCTION_NAME,?MODULE,?LINE}]),
-    
+      ["#2_connected",
+       "#2_connected",
+       "#2_connected",
+       "#2_connected"]=[rpc:call(N,db_host,status,[{"c200","host"}],5000)|| N<-sd:get(mnesia)],
+
    
 
  %  io:format("#2 mnesia:system_info() ~p~n",[{[rpc:call(N,mnesia,system_info,[],5000)|| N<-sd:get(mnesia)],?FUNCTION_NAME,?MODULE,?LINE}]),
@@ -160,7 +179,12 @@ app_simulation_1()->
     %% Kill N1
     slave:stop(N1),
   %  io:format("#3 mnesia:system_info() ~p~n",[{[rpc:call(N,mnesia,system_info,[],5000)|| N<-sd:get(mnesia)],?FUNCTION_NAME,?MODULE,?LINE}]),
-    io:format("#31 mnesia:system_info() ~p~n",[{rpc:call(node(),mnesia,system_info,[],5000),?FUNCTION_NAME,?MODULE,?LINE}]),
+ %   io:format("#31 mnesia:system_info() ~p~n",[{rpc:call(node(),mnesia,system_info,[],5000),?FUNCTION_NAME,?MODULE,?LINE}]),
+  
+    ["#2_connected",
+     "#2_connected",
+     "#2_connected"]=[rpc:call(N,db_host,status,[{"c200","host"}],5000)|| N<-sd:get(mnesia)],
+    {atomic,ok}=rpc:call(N2,db_host,update_status,[{"c200","host"},"#3_connected"],5000), 
     %% Restart N1
     {ok,N1}=start_slave("host1"),
     {ok,_}=rpc:call(N1,sd,start,[],5000),
@@ -183,61 +207,16 @@ app_simulation_1()->
       {aborted,{already_exists,vegetable,test@c100}}}]=lists:sort(rpc:call(N1,dbase,load_textfile,[TableTextFiles],5000)),
     
     io:format("#15 mnesia:system_info() ~p~n",[{[{N,rpc:call(N,mnesia,system_info,[],5000)}|| N<-sd:get(mnesia)],?FUNCTION_NAME,?MODULE,?LINE}]),
-   
-    init:stop(),
-    timer:sleep(2000),
-
-    [N0,N1,N2]=get_nodes(),
-    [{ok,_},{ok,_},{ok,_},{ok,_}]=[rpc:call(N,sd,start,[],5000)||N<-[node()|get_nodes()]],    
-  
-    
-    
-    [ok,ok,ok,ok]=[rpc:call(N,application,start,[dbase_infra],5000)||N<-[node()|get_nodes()]],
-    []=lists:delete(node(),lists:sort(sd:get(mnesia))),  
-    [host0@c100,host1@c100,host2@c100,test@c100]=lists:sort(rpc:call(N0,sd,get,[dbase_infra],5000)),
+    ["#3_connected",
+     "#3_connected",
+     "#3_connected",
+     "#3_connected"]=[rpc:call(N,db_host,status,[{"c200","host"}],5000)|| N<-sd:get(mnesia)],
     
 
-    %% Pre requisites set
-  
-    %% Detect and start first dbase node
-    %%
-    %% 1. Detect if the new node is the first node
-    Node=node(),
-    [{atomic,ok},
-     {atomic,ok}]=case sd:get(mnesia) of
-		      []->
-			  %% Create missing tables     
-			  AppsTables=[fruit,host],
-			  TableTextFiles=[{fruit,"test_src/fruit.con"},{host,"test_src/host.config"}],	       
-			  Tables=[Table||Table<-mnesia:system_info(tables),
-					 lists:member(Table,AppsTables)],
-			  [mnesia:load_textfile(TextFile)||{Table,TextFile}<-TableTextFiles,
-							   false=:=lists:member(Table,Tables)];
-		      [Node]->
-			  case dbase:dynamic_db_init([]) of
-			      {error,Reason}->
-				  {error,Reason};
-			      ok->
-				  %% Create missing tables     
-				  AppsTables=[fruit,host],
-				  TableTextFiles=[{fruit,"test_src/fruit.con"},{host,"test_src/host.config"}],	       
-				  Tables=[Table||Table<-mnesia:system_info(tables),
-						 lists:member(Table,AppsTables)],
-				  [mnesia:load_textfile(TextFile)||{Table,TextFile}<-TableTextFiles,
-								   false=:=lists:member(Table,Tables)]
-			  end;
-		      MnesiaNodes->
-			  {error,[shouldnt_be_started,MnesiaNodes]}
-		  end,
+  %  init:stop(),
+  %  timer:sleep(2000),
 
     
-    [{"c200","host"},
-     {"c201","host"},
-     {"c202","host"},
-     {"c203","host"}]=lists:sort(mnesia:dirty_all_keys(host)),
-    [apple,orange]=lists:sort(mnesia:dirty_all_keys(fruit)),
-    
-    %% 
 
     ok.
 
