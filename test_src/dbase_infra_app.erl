@@ -1,38 +1,32 @@
 %% Author: uabjle
 %% Created: 10 dec 2012
 %% Description: TODO: Add description to application_org
--module(dbase). 
- 
+-module(dbase_infra_app). 
+
+-behaviour(application).
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
--include("dbase_spec.hrl").
+
 %% --------------------------------------------------------------------
 %% Behavioural exports
 %% --------------------------------------------------------------------
-
 -export([
-	 dynamic_db_init/1,
-	 load_textfile/1,
-	 dynamic_add_table/2
-	]).
-
-
-
--export([
-
-	]).
-
+	 start/2,
+	 stop/1
+        ]).
 
 %% --------------------------------------------------------------------
 %% Internal exports
 %% --------------------------------------------------------------------
--export([start/0,
-	 stop/0]).
+-export([
+	 
+	]).
+
 %% --------------------------------------------------------------------
 %% Macros
 %% --------------------------------------------------------------------
--define(SERVER,dbase_server).
+
 %% --------------------------------------------------------------------
 %% Records
 %% --------------------------------------------------------------------
@@ -53,27 +47,29 @@
 %%          {error, Reason}
 %% --------------------------------------------------------------------
 
+
+
 %% --------------------------------------------------------------------
 %% Func: start/2
 %% Returns: {ok, Pid}        |
 %%          {ok, Pid, State} |
 %%          {error, Reason}
 %% --------------------------------------------------------------------
-start()-> gen_server:start_link({local, ?SERVER}, ?SERVER, [], []).
-stop()-> gen_server:call(?SERVER, {stop},infinity).
-
-
-dynamic_db_init(DbaseNodeList)->
-    gen_server:call(?SERVER, {dynamic_db_init,DbaseNodeList},infinity).
-
-load_textfile(TableTextFiles)->
-    gen_server:call(?SERVER, {load_textfile,TableTextFiles},infinity).
-dynamic_add_table(Table,StorageType)->
-    gen_server:call(?SERVER, {dynamic_add_table,Table,StorageType},infinity). 
-
-
+start(_Type, _StartArgs) ->
+    ok=init(),
+    {ok,Pid}= dbase_infra_sup:start_link(),
+    {ok,Pid}.
+   
+%% --------------------------------------------------------------------
+%% Func: stop/1
+%% Returns: any
+%% --------------------------------------------------------------------
+stop(_State) ->
+    ok.
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
+init()->
 
+    ok.

@@ -4,11 +4,12 @@
 %%% 
 %%% Created : 10 dec 2012
 %%% -------------------------------------------------------------------
--module(db_logger_test).   
-      
+-module(prototype_test).   
+    
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
+-include_lib("kernel/include/logger.hrl").
 -include("controller.hrl").
 %% --------------------------------------------------------------------
 
@@ -26,33 +27,26 @@
 %% Description: List of test cases 
 %% Returns: non
 %% --------------------------------------------------------------------
-%create(DateTime,Node,Severity,Msg,M,F,L,A)
--define(logger_info(Severity,Msg,Args),
-	{date(),time(),node(),Severity,Msg,?MODULE,?FUNCTION_NAME,?LINE,Args,new}).
 start()->
-   
+   % init
+    {ok,_DbasePid}=dbase:start(),
+    ok=dbase:dynamic_db_init([]),
+    io:format("mnesia:sys info) ~p~n",[{mnesia:system_info(),?FUNCTION_NAME,?MODULE,?LINE}]),
+    %% load from file 
+    {atomic,ok}=mnesia:load_textfile("host.config"),
+    gl=lists:sort(mnesia:dirty_all_keys(host)),
+    {atomic,ok}=mnesia:load_textfile("fruit.con"),
+    gl=lists:sort(mnesia:dirty_all_keys(host)),
   
-    L1=?logger_info(alert,"test1",[]),
-    L2=?logger_info(alert,"test2",[23,76]),
-    L3=?logger_info(ticket,"test3",[]),
-    L4=?logger_info(info,"server started",[]),
 
-    ok=db_logger:create(L1),
-    ok=db_logger:create(L2),
-    ok=db_logger:create(L3),
-    ok=db_logger:create(L4),
-    SortedList=lists:reverse(lists:sort(mnesia:dirty_all_keys(logger_info))),
-    4=lists:flatlength(mnesia:dirty_all_keys(logger_info)),    
-    [db_logger:nice_print(Id)||Id<-SortedList],
-    io:format(" mellanrum ~n"),
-
-    [db_logger:nice_print(Id)||Id<-lists:sublist(SortedList,2)],
-    
-
+   % io:format("mnesia:dirty_all_keys ~p~n",[{mnesia:dirty_all_keys(host),?FUNCTION_NAME,?MODULE,?LINE}]),
+   % io:format("mnesia:dirty_all_keys ~p~n",[{mnesia:dirty_all_keys(fruit),?FUNCTION_NAME,?MODULE,?LINE}]),
     
     
-   
-    ok. 
+    init:stop(),
+    timer:sleep(1000),
+    
+  ok. 
 
 %% --------------------------------------------------------------------
 %% Function:start/0 
@@ -65,3 +59,4 @@ start()->
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% --------------------------------------------------------------------
+

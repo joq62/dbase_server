@@ -56,7 +56,11 @@ schedule()->
 %%          {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
-    
+    io:format("#1 ~p~n",[{?FUNCTION_NAME,?MODULE,?LINE}]),
+    {ok,DbaseApplication}=application:get_env(dbase_app),
+    DbaseAppNodes=lists:delete(node(),sd:get(DbaseApplication)),
+    ok=lib_dbase:dynamic_db_init(DbaseAppNodes),
+ 
     rpc:cast(node(),log,log,[?logger_info(info,"server started",[])]),
     {ok, #state{}}.
 
@@ -70,67 +74,19 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-
-handle_call({add_table,Node,Table,StorageType},_From, State) ->
-    Reply=rpc:call(node(),lib_dbase,add_table,[Node,Table,StorageType],25*1000),
-    {reply, Reply, State};
-
-
-
 handle_call({dynamic_db_init,DbaseNodeList},_From, State) ->
     Reply=rpc:call(node(),lib_dbase,dynamic_db_init,[DbaseNodeList],5*1000),
     {reply, Reply, State};
 
-
-handle_call({create,Record},_From, State) ->
-    Reply=rpc:call(node(),lib_dbase,create,[Record],5*1000),
+handle_call({dynamic_add_table,Table,StorageType},_From, State) ->
+    Reply=rpc:call(node(),lib_dbase,dynamic_add_table,[Table,StorageType],5*1000),
     {reply, Reply, State};
 
-handle_call({delete,Table,RecordToRemove},_From, State) ->
-    Reply=rpc:call(node(),lib_dbase,delete,[Table,RecordToRemove],5*1000),
-    {reply, Reply, State};
-
-handle_call({update,Table,RecordToUpdate,EntryNum,NewData},_From, State) ->
-    Reply=rpc:call(node(),lib_dbase,update,[Table,RecordToUpdate,EntryNum,NewData],5*1000),
-    {reply, Reply, State};
-
-handle_call({do_qlc,Table},_From, State) ->
-    Reply=rpc:call(node(),lib_dbase,do_qlc,[Table],5*1000),
-    {reply, Reply, State};
-
-handle_call({load_from_file,Module,Dir,yes},_From, State) ->
-    ok=rpc:call(node(),Module,create_table,[],5*1000),
-    AllData=rpc:call(node(),Module,data_from_file,[Dir],5*1000),
-    CreateResult=[rpc:call(node(),Module,create,[Data],5*1000)||Data<-AllData],
-    Reply=case [R||R<-CreateResult,R/=ok] of
-	      []->
-		  ok;
-	      ErrorList->
-		  log:log(?logger_info(ticket,"Create failed ",[ErrorList])),
-		  ErrorList
-	  end,
-    {reply, Reply, State};
-
-handle_call({load_from_file,Module,na,no},_From, State) ->
-    Reply=rpc:call(node(),Module,create_table,[],5*1000),
+handle_call({load_textfile,TableTextFiles},_From, State) ->
+    Reply=rpc:call(node(),lib_dbase,load_textfile,[TableTextFiles],5*1000),
     {reply, Reply, State};
 
 
-handle_call({init_dynamic},_From, State) ->
-    Reply=rpc:call(node(),dbase,dynamic_db_init,[[]],5*1000),
-    {reply, Reply, State};
-
-handle_call({add_dynamic,Node},_From, State) ->
-    Reply=rpc:call(Node,dbase,dynamic_db_init,[[node()]],5*1000),
-    {reply, Reply, State};
-
-handle_call({dynamic_load_table,Node,Module},_From, State) ->
-    Reply=rpc:call(Node,dbase,dynamic_load_table,[Module],5*1000),
-    {reply, Reply, State};
-
-handle_call({loaded},_From, State) ->
-    Reply=State#state.loaded,
-    {reply, Reply, State};
 
 handle_call({stop}, _From, State) ->
     mnesia:stop(),
