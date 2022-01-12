@@ -6,7 +6,7 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
--include("dbase_spec.hrl").
+
 %% --------------------------------------------------------------------
 %% Behavioural exports
 %% --------------------------------------------------------------------
@@ -14,7 +14,8 @@
 -export([
 	 dynamic_db_init/1,
 	 load_textfile/1,
-	 dynamic_add_table/2
+	 dynamic_add_table/2,
+	 ping/0
 	]).
 
 
@@ -61,6 +62,7 @@
 %% --------------------------------------------------------------------
 start()-> gen_server:start_link({local, ?SERVER}, ?SERVER, [], []).
 stop()-> gen_server:call(?SERVER, {stop},infinity).
+ping()-> gen_server:call(?SERVER, {ping},infinity).
 
 
 dynamic_db_init(DbaseNodeList)->

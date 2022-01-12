@@ -38,11 +38,12 @@ load_textfile(TableTextFiles)->
 			  Table/=schema],
  %   io:format("PresentTables  ~p~n",[{PresentTables,node(),?FUNCTION_NAME,?MODULE,?LINE}]),
     
-    LoadInfo=[{mnesia:load_textfile(TextFile),Table,TextFile}||{Table,_StorageType,TextFile}<-TableTextFiles,
-				     false=:=lists:member(Table,PresentTables)],
+    LoadInfoRes=[{mnesia:load_textfile(TextFile),Table,TextFile}||{Table,_StorageType,TextFile}<-TableTextFiles,
+						      false=:=lists:member(Table,PresentTables)],
  %   io:format("LoadInfo ~p~n",[{LoadInfo,node(),?FUNCTION_NAME,?MODULE,?LINE}]),
-    [{N,Table,rpc:call(N,dbase,dynamic_add_table,[Table,StorageType],5000)}||N<-lists:delete(node(),sd:get(dbase_infra)),
-									    {Table,StorageType,_TextFile}<-TableTextFiles].
+    AddTableRes=[{N,Table,rpc:call(N,dbase,dynamic_add_table,[Table,StorageType],5000)}||N<-lists:delete(node(),sd:get(dbase_infra)),
+											{Table,StorageType,_TextFile}<-TableTextFiles],
+    {AddTableRes,LoadInfoRes}.
 
 %% --------------------------------------------------------------------
 %% Function:start/0 
@@ -50,7 +51,7 @@ load_textfile(TableTextFiles)->
 %% Returns: non
 %% --------------------------------------------------------------------
 dynamic_db_init([])->
-    io:format(" ~p~n",[{node(),?FUNCTION_NAME,?MODULE,?LINE}]),
+ %   io:format(" ~p~n",[{node(),?FUNCTION_NAME,?MODULE,?LINE}]),
     mnesia:stop(),
     mnesia:del_table_copy(schema,node()),
     mnesia:delete_schema([node()]),

@@ -14,7 +14,7 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
--include("logger_infra.hrl").
+-include("log.hrl").
 %% --------------------------------------------------------------------
 
 -define(ScheduleInterval,1*10*1000).
@@ -56,12 +56,12 @@ schedule()->
 %%          {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
-    io:format("#1 ~p~n",[{?FUNCTION_NAME,?MODULE,?LINE}]),
-    {ok,DbaseApplication}=application:get_env(dbase_app),
+  %  io:format("#1 ~p~n",[{?FUNCTION_NAME,?MODULE,?LINE}]),
+    {ok,DbaseApplication}=application:get_env(application),
     DbaseAppNodes=lists:delete(node(),sd:get(DbaseApplication)),
     ok=lib_dbase:dynamic_db_init(DbaseAppNodes),
- 
-    rpc:cast(node(),log,log,[?logger_info(info,"server started",[])]),
+    
+    rpc:cast(node(),log,log,[?Log_info("server started",[])]),
     {ok, #state{}}.
 
 %% --------------------------------------------------------------------
@@ -84,6 +84,10 @@ handle_call({dynamic_add_table,Table,StorageType},_From, State) ->
 
 handle_call({load_textfile,TableTextFiles},_From, State) ->
     Reply=rpc:call(node(),lib_dbase,load_textfile,[TableTextFiles],5*1000),
+    {reply, Reply, State};
+
+handle_call({ping},_From, State) ->
+    Reply=pong,
     {reply, Reply, State};
 
 

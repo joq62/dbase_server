@@ -80,34 +80,36 @@ app_simulation_1()->
     TableTextFiles=[{fruit,ram_copies,"test_src/fruit.con"},
 		    {vegetable,ram_copies,"test_src/fruit.con"},
 		    {host,ram_copies,"test_src/host.config"}],    
-    AppsTables=glukr,
+
     %% First Kubelete starts
     {ok,_}=sd:start(),
-    ok=application:set_env([{dbase_infra,[{dbase_app,dbase_infra}]}]),
+    ok=application:set_env([{dbase_infra,[{application,dbase_infra}]}]),
     ok=application:start(dbase_infra),
 %    io:format("#0 mnesia:system_info() ~p~n",[{mnesia:system_info(),?FUNCTION_NAME,?MODULE,?LINE}]),
    
         
     %% Second Kubelet starts
     {ok,_}=rpc:call(N0,sd,start,[],5000),
-    ok=rpc:call(N0,application,set_env,[[{dbase_infra,[{dbase_app,dbase_infra}]}]],5000),
+    ok=rpc:call(N0,application,set_env,[[{dbase_infra,[{application,dbase_infra}]}]],5000),
     ok=rpc:call(N0,application,start,[dbase_infra],5000),  
  %   io:format("#1 mnesia:system_info() ~p~n",[{[rpc:call(N,mnesia,system_info,[],5000)|| N<-sd:get(mnesia)],?FUNCTION_NAME,?MODULE,?LINE}]),
    
 
     %% Application on first nod adds its tables 
+    {AddTableRes,_}=dbase:load_textfile(TableTextFiles),
     [{host0@c100,fruit,{atomic,ok}},
      {host0@c100,host,{atomic,ok}},
-     {host0@c100,vegetable,{atomic,ok}}]=lists:sort(dbase:load_textfile(TableTextFiles)),
+     {host0@c100,vegetable,{atomic,ok}}]=lists:sort(AddTableRes),
     
   %  io:format("#11 mnesia:system_info() ~p~n",[{rpc:call(node(),mnesia,system_info,[],5000),?FUNCTION_NAME,?MODULE,?LINE}]),
 
     not_attached=db_host:status({"c200","host"}),
    
     %% Second nodes App add is tables 
+    {AddTableRes2,_}=rpc:call(N0,dbase,load_textfile,[TableTextFiles],5000),
     [{test@c100,fruit,{aborted,{already_exists,fruit,test@c100}}},
      {test@c100,host,{aborted,{already_exists,host,test@c100}}},
-     {test@c100,vegetable,{aborted,{already_exists,vegetable,test@c100}}}]=lists:sort(rpc:call(N0,dbase,load_textfile,[TableTextFiles],5000)),
+     {test@c100,vegetable,{aborted,{already_exists,vegetable,test@c100}}}]=lists:sort(AddTableRes2),
    
 %    io:format("#12 mnesia:system_info() ~p~n",[{[{N,rpc:call(N,mnesia,system_info,[],5000)}|| N<-sd:get(mnesia)],?FUNCTION_NAME,?MODULE,?LINE}]),
     
@@ -121,9 +123,11 @@ app_simulation_1()->
 
 %% Add third node
     {ok,_}=rpc:call(N1,sd,start,[],5000),
-    ok=rpc:call(N1,application,set_env,[[{dbase_infra,[{dbase_app,dbase_infra}]}]],5000),
+    ok=rpc:call(N1,application,set_env,[[{dbase_infra,[{application,dbase_infra}]}]],5000),
     ok=rpc:call(N1,application,start,[dbase_infra],5000),  
     %% App add is tables 
+    
+    {AddTableRes3,_}=rpc:call(N1,dbase,load_textfile,[TableTextFiles],5000),
    
    [{host0@c100,fruit,
      {aborted,{already_exists,fruit,host0@c100}}},
@@ -133,7 +137,7 @@ app_simulation_1()->
     {test@c100,fruit,{aborted,{already_exists,fruit,test@c100}}},
     {test@c100,host,{aborted,{already_exists,host,test@c100}}},
     {test@c100,vegetable,
-     {aborted,{already_exists,vegetable,test@c100}}}]=lists:sort(rpc:call(N1,dbase,load_textfile,[TableTextFiles],5000)),
+     {aborted,{already_exists,vegetable,test@c100}}}]=lists:sort(AddTableRes3),
     
   %  io:format("#13 mnesia:system_info() ~p~n",[{[{N,rpc:call(N,mnesia,system_info,[],5000)}|| N<-sd:get(mnesia)],?FUNCTION_NAME,?MODULE,?LINE}]),
   
@@ -147,9 +151,11 @@ app_simulation_1()->
 
   %% Add fourth node'
     {ok,_}=rpc:call(N2,sd,start,[],5000),
-    ok=rpc:call(N2,application,set_env,[[{dbase_infra,[{dbase_app,dbase_infra}]}]],5000),
+    ok=rpc:call(N2,application,set_env,[[{dbase_infra,[{application,dbase_infra}]}]],5000),
     ok=rpc:call(N2,application,start,[dbase_infra],5000),  
     %% App add is tables 
+
+    {AddTableRes4,_}=rpc:call(N2,dbase,load_textfile,[TableTextFiles],5000),
    [{host0@c100,fruit,
      {aborted,{already_exists,fruit,host0@c100}}},
     {host0@c100,host,{aborted,{already_exists,host,host0@c100}}},
@@ -163,7 +169,7 @@ app_simulation_1()->
     {test@c100,fruit,{aborted,{already_exists,fruit,test@c100}}},
     {test@c100,host,{aborted,{already_exists,host,test@c100}}},
     {test@c100,vegetable,
-     {aborted,{already_exists,vegetable,test@c100}}}]=lists:sort(rpc:call(N2,dbase,load_textfile,[TableTextFiles],5000)),
+     {aborted,{already_exists,vegetable,test@c100}}}]=lists:sort(AddTableRes4),
     
   %  io:format("#14 mnesia:system_info() ~p~n",[{[{N,rpc:call(N,mnesia,system_info,[],5000)}|| N<-sd:get(mnesia)],?FUNCTION_NAME,?MODULE,?LINE}]),
       ["#2_connected",
@@ -188,9 +194,12 @@ app_simulation_1()->
     %% Restart N1
     {ok,N1}=start_slave("host1"),
     {ok,_}=rpc:call(N1,sd,start,[],5000),
-    ok=rpc:call(N1,application,set_env,[[{dbase_infra,[{dbase_app,dbase_infra}]}]],5000),
+    ok=rpc:call(N1,application,set_env,[[{dbase_infra,[{application,dbase_infra}]}]],5000),
     ok=rpc:call(N1,application,start,[dbase_infra],5000),  
     %% App add is tables 
+
+
+    {AddTableRes5,_}=rpc:call(N1,dbase,load_textfile,[TableTextFiles],5000),
     [{host0@c100,fruit,
       {aborted,{already_exists,fruit,host0@c100}}},
      {host0@c100,host,{aborted,{already_exists,host,host0@c100}}},
@@ -204,7 +213,7 @@ app_simulation_1()->
      {test@c100,fruit,{aborted,{already_exists,fruit,test@c100}}},
      {test@c100,host,{aborted,{already_exists,host,test@c100}}},
      {test@c100,vegetable,
-      {aborted,{already_exists,vegetable,test@c100}}}]=lists:sort(rpc:call(N1,dbase,load_textfile,[TableTextFiles],5000)),
+      {aborted,{already_exists,vegetable,test@c100}}}]=lists:sort(AddTableRes5),
     
     io:format("#15 mnesia:system_info() ~p~n",[{[{N,rpc:call(N,mnesia,system_info,[],5000)}|| N<-sd:get(mnesia)],?FUNCTION_NAME,?MODULE,?LINE}]),
     ["#3_connected",
